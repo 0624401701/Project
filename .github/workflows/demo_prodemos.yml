@@ -15,64 +15,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
+      # Set up the required Python version
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Create and start virtual environment
+      # Create and activate virtual environment
+      - name: Create and activate virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
-      
+
+      # Install dependencies from requirements.txt
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run collectstatic
+      # Run collectstatic for Django (or other frameworks)
+      - name: Collect static files
         run: python manage.py collectstatic --noinput
 
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      # Optional: Add step to run tests (e.g., PyTest, Django test suites)
+      # - name: Run tests
+      #   run: pytest
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      # Create a zip artifact for deployment
+      - name: Create deployment artifact
+        run: zip -r release.zip ./* -x venv/*
 
-      - name: Upload artifact for deployment jobs
+      # Upload the artifact for the deploy job
+      - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            release.zip
-            !venv/
-      
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write  # Required for requesting the JWT
+      contents: read   # Required for actions/checkout
 
     steps:
-      - name: Download artifact from build job
+      # Download the artifact from the build job
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: python-app
-      
-      - name: Login to Azure
+
+      # Login to Azure using Service Principal credentials
+      - name: Azure login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8A9C435EFFF240479C25B2C91631CCAF }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_A3660F0FDD4940B69A99DEE0088DD7D7 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_528DAE8C9B2D4843BB5D30647A78FC98 }}
 
-      - name: 'Deploy to Azure Web App'
+      # Deploy the app to Azure Web App
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'prodemos'
           slot-name: 'Production'
-
-          
